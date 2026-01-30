@@ -9,9 +9,8 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration - allow frontend to connect
 app.use(cors({
-    origin: 'http://localhost:3000', // Your React app URL
+    origin: 'http://localhost:3000', // React app URL
     credentials: true
 }));
 
@@ -26,7 +25,7 @@ app.use('/api/admins', adminRoutes);
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        message: '🚀 EduBook Backend API is running!',
+        message: ' EduBook Backend API is running!',
         database: 'EduBook',
         collection: 'Admin',
         timestamp: new Date().toISOString()
@@ -67,7 +66,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
@@ -75,19 +73,19 @@ app.use('*', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 const MONGO = process.env.MONGODB_URI || 'mongodb://localhost:27017/EduBook';
 
 async function start() {
     try {
         await mongoose.connect(MONGO, {});
         
-        console.log('✅ MongoDB Connected Successfully!');
-        console.log(`📍 Host: ${mongoose.connection.host}`);
-        console.log(`🗄️ Database: ${mongoose.connection.name}`);
+        console.log(' MongoDB Connected Successfully!');
+        console.log(` Host: ${mongoose.connection.host}`);
+        console.log(`Database: ${mongoose.connection.name}`);
         
         app.listen(PORT, () => {
-            console.log(`\n🎯 Server Details:`);
+            console.log(`\n Server Details:`);
             console.log(`   Server running on port ${PORT}`);
             console.log(`   Database: EduBook`);
             console.log(`   Collection: Admin`);
