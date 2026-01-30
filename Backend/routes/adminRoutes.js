@@ -1,101 +1,3 @@
-// // import express from 'express';
-// // import Admin from '../models/Admin.js';
-
-// // const router = express.Router();
-
-// // // POST /api/admins - Create new admin
-// // router.post('/', async (req, res) => {
-// //     try {
-// //         const admin = new Admin(req.body);
-// //         const savedAdmin = await admin.save();
-        
-// //         res.status(201).json({
-// //             success: true,
-// //             message: 'Admin created successfully',
-// //             data: savedAdmin
-// //         });
-// //     } catch (error) {
-// //         res.status(400).json({
-// //             success: false,
-// //             message: 'Error creating admin',
-// //             error: error.message
-// //         });
-// //     }
-// // });
-
-// // // GET /api/admins - Get all admins
-// // router.get('/', async (req, res) => {
-// //     try {
-// //         const admins = await Admin.find();
-// //         res.json({
-// //             success: true,
-// //             data: admins
-// //         });
-// //     } catch (error) {
-// //         res.status(500).json({
-// //             success: false,
-// //             message: 'Error fetching admins',
-// //             error: error.message
-// //         });
-// //     }
-// // });
-
-// // export default router;
-
-// import express from 'express';
-// import Admin from '../models/Admin.js';
-
-// const router = express.Router();
-
-// // POST /api/admins - Create new admin
-// router.post('/', async (req, res) => {
-//     try {
-//         console.log("Received signup request:", req.body);
-        
-//         const admin = new Admin(req.body);
-//         const savedAdmin = await admin.save();
-        
-//         console.log("Admin created successfully:", savedAdmin.email);
-        
-//         res.status(201).json({
-//             success: true,
-//             message: 'Admin created successfully',
-//             data: {
-//                 id: savedAdmin._id,
-//                 name: savedAdmin.name,
-//                 email: savedAdmin.email,
-//                 role: savedAdmin.role
-//             }
-//         });
-//     } catch (error) {
-//         console.error("Error creating admin:", error);
-//         res.status(400).json({
-//             success: false,
-//             message: 'Error creating admin',
-//             error: error.message
-//         });
-//     }
-// });
-
-// // GET /api/admins - Get all admins (for testing)
-// router.get('/', async (req, res) => {
-//     try {
-//         const admins = await Admin.find().select('-password');
-//         res.json({
-//             success: true,
-//             data: admins
-//         });
-//     } catch (error) {
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching admins',
-//             error: error.message
-//         });
-//     }
-// });
-
-// export default router;
-
 import express from 'express';
 import Admin from '../models/Admin.js';
 
@@ -147,8 +49,7 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // For now, using simple password comparison
-        // In production, you should use bcrypt for password hashing
+     
         if (admin.password !== password) {
             return res.status(401).json({
                 success: false,
@@ -178,7 +79,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// GET /api/admins - Get all admins (for testing)
 router.get('/', async (req, res) => {
     try {
         const admins = await Admin.find().select('-password');
