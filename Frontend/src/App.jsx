@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // Public pages
 import Landing from "./Pages/Landing";
 import SignIn from "./Pages/SignIn";
+import LogIn from "./Pages/LogIn";
 
 // Student layout + pages
 import StudentLayout from "./student/layout/StudentLayout";
@@ -55,7 +56,8 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<SignIn />} />
+        <Route path="/signup" element={<SignIn />} />
+        <Route path="/login" element={<LogIn />} />
 
         {/* STUDENT ROUTES (same as previous, but nested) */}
         <Route path="/student" element={<StudentLayout student={student} />}>

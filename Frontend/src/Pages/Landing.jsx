@@ -25,7 +25,7 @@ export default function Landing() {
             </a>
           </nav>
 
-          {/* Login Button */}
+          {/* Login Button -> LogIn.jsx */}
           <Link
             to="/login"
             className="rounded-md bg-indigo-600 px-5 py-2.5 text-base font-medium text-white shadow-sm hover:bg-indigo-700"
@@ -52,19 +52,16 @@ export default function Landing() {
               organized.
             </p>
 
-            {/* Get Started Button */}
+            {/* Get Started Button -> SignIn.jsx (signup) */}
             <div className="mt-7 flex items-center gap-4">
               <Link
-                to="/login"
+                to="/signup"
                 className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700"
               >
                 Get Started <span aria-hidden>→</span>
               </Link>
             </div>
 
-            <p className="mt-4 text-sm text-slate-500 md:text-base">
-              No credit card required. Free for individual teachers.
-            </p>
           </div>
 
           {/* Right image */}
@@ -80,7 +77,7 @@ export default function Landing() {
         </div>
       </section>
 
-  {/* FEATURES SECTION */}
+      {/* FEATURES SECTION */}
       <section id="features" className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-2 sm:px-4 py-14 md:py-16">
           <div className="text-center">
@@ -104,7 +101,6 @@ export default function Landing() {
               </p>
 
               <div className="space-y-4">
-                {/* Feature Card 1 */}
                 <div className="flex gap-4 rounded-xl border bg-white p-5 shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 text-lg">
                     ✓
@@ -120,7 +116,6 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* Feature Card 2 */}
                 <div className="flex gap-4 rounded-xl border bg-white p-5 shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 text-lg">
                     ☰
@@ -136,7 +131,6 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* Feature Card 3 */}
                 <div className="flex gap-4 rounded-xl border bg-white p-5 shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 text-lg">
                     📄
@@ -152,7 +146,6 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* Feature Card 4 */}
                 <div className="flex gap-4 rounded-xl border bg-white p-5 shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 text-lg">
                     ↗
@@ -183,7 +176,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
     </div>
   );
 }

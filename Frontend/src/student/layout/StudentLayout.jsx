@@ -1,11 +1,38 @@
-// import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-export default function StudentLayout({ student }) {
+export default function StudentLayout() {
   const navigate = useNavigate();
 
+  // Read logged-in user from localStorage
+  const student = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
+  // Protect Student routes
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    // Not logged in
+    if (!token || !student) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    // Wrong role
+    if (student.role !== "Student") {
+      navigate("/teacher/dashboard", { replace: true });
+    }
+  }, [navigate, student]);
+
   const handleLogout = () => {
-    // later: clear auth token / session here
+    // Clear auth data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/", { replace: true });
   };
 
@@ -15,6 +42,8 @@ export default function StudentLayout({ student }) {
         ? "bg-indigo-600 text-white"
         : "text-slate-300 hover:bg-white/10 hover:text-white"
     }`;
+
+  const initial = student?.name?.trim()?.[0]?.toUpperCase() || "S";
 
   return (
     <div className="min-h-screen w-full bg-slate-50">
@@ -81,18 +110,23 @@ export default function StudentLayout({ student }) {
             <div />
 
             <div className="flex items-center gap-4">
+              {/*  Student info box */}
               <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
-                  {student?.name?.[0] ?? "S"}
+                  {initial}
                 </div>
+
                 <div className="leading-tight">
                   <div className="text-sm font-semibold text-slate-900">
-                    {student?.name}
+                    {student?.name || "Student"}
                   </div>
-                  <div className="text-xs text-slate-500">Student</div>
+                  <div className="text-xs text-slate-500">
+                    {student?.role || "Student"}
+                  </div>
                 </div>
               </div>
 
+              {/* Top Logout */}
               <button
                 type="button"
                 onClick={handleLogout}

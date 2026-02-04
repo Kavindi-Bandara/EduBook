@@ -1,21 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-/**
- * Expected backend API (you will implement in Node):
- * GET  /api/attendance?studentId=123&month=2026-01  -> returns events for that month
- * POST /api/attendance/mark (teacher) { studentId, date: "2026-01-03", status: "present"|"absent"|"holiday" }
- *
- * Data shape returned by GET:
- * {
- *   month: "2026-01",
- *   events: [
- *     { date: "2026-01-02", status: "present" },
- *     { date: "2026-01-03", status: "absent" },
- *     { date: "2026-01-09", status: "holiday" }
- *   ]
- * }
- */
-
 function cls(...a) {
   return a.filter(Boolean).join(" ");
 }
