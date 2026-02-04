@@ -4,5 +4,5 @@ RUN apk add --no-cache bash
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . .
-EXPOSE 4000
+EXPOSE 5000
 CMD ["npm", "start"]

@@ -1,5 +1,7 @@
-// src/teacher/pages/TeacherAttendance.jsx
 import React from "react";
+
+/*  API Base URL from Frontend/.env (same as MyStudents.jsx) */
+const API = import.meta.env.VITE_API_URL;
 
 /* -----------------------------
   Small UI helpers
@@ -54,43 +56,127 @@ function Metric({ label, value, valueClass }) {
   Page
 ------------------------------*/
 export default function TeacherAttendance() {
+  const token = localStorage.getItem("token");
+
+  // IMPORTANT: these should match EXACT values saved in student.className
+  // Example: in your DB you have "11A", but your dropdown currently says "Class 10-A"
+  // So either:
+  //  1) change your student className values to "Class 10-A"
+  //  OR
+  //  2) change this dropdown options to "11A", "10A", etc.
   const classes = ["Class 10-A", "Class 10-B", "Class 11-A"];
 
   const [selectedClass, setSelectedClass] = React.useState("Class 10-A");
-  const [selectedDate, setSelectedDate] = React.useState("2026-01-29");
+  const [selectedDate, setSelectedDate] = React.useState(() => {
+    // default: today (YYYY-MM-DD)
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
 
-  // Replace with API data later
-  const initialRows = React.useMemo(
-    () => [
-      { id: 1001, name: "Alex Thompson", present: true },
-      { id: 1002, name: "Sarah Williams", present: true },
-      { id: 1003, name: "Michael Brown", present: false },
-      { id: 1004, name: "Emily Davis", present: true },
-      { id: 1005, name: "James Wilson", present: true },
-      { id: 1006, name: "Jessica Garcia", present: true },
-      { id: 1007, name: "David Miller", present: true },
-      { id: 1008, name: "Robert Martinez", present: false },
-    ],
-    []
-  );
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [students, setStudents] = React.useState([]);
 
-  const [rows, setRows] = React.useState(initialRows);
+  // attendance state for UI (local for now)
+  // key format: `${date}__${studentId}`
+  const [attendance, setAttendance] = React.useState({});
 
+  //  Load students from backend (same endpoint MyStudents.jsx uses)
+  const fetchStudents = React.useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API}/records`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Failed to load students");
+        setStudents([]);
+        return;
+      }
+
+      const list = Array.isArray(data) ? data : data.students || [];
+      setStudents(list);
+    } catch (e) {
+      setError("Server not reachable.");
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  // load once
   React.useEffect(() => {
-    // when class/date changes you would fetch new attendance data
-    // for demo we keep the same dataset
-    setRows(initialRows);
-  }, [selectedClass, selectedDate, initialRows]);
+    fetchStudents();
+  }, [fetchStudents]);
+
+  // filter students by selectedClass
+  const classStudents = React.useMemo(() => {
+    return students.filter((s) => (s.className || "").trim() === selectedClass.trim());
+  }, [students, selectedClass]);
+
+  // ensure attendance keys exist for current class/date (default: Present)
+  React.useEffect(() => {
+    if (!classStudents.length) return;
+
+    setAttendance((prev) => {
+      const next = { ...prev };
+      for (const s of classStudents) {
+        const sid = s._id || s.id || s.rollNo;
+        const key = `${selectedDate}__${sid}`;
+        if (next[key] === undefined) next[key] = true; // default present
+      }
+      return next;
+    });
+  }, [classStudents, selectedDate]);
+
+  const rows = React.useMemo(() => {
+    return classStudents
+      .map((s) => {
+        const sid = s._id || s.id || s.rollNo;
+        const key = `${selectedDate}__${sid}`;
+        const present = attendance[key] ?? true;
+
+        return {
+          key: sid,
+          rollNo: s.rollNo,
+          name: s.name,
+          present,
+        };
+      })
+      // nice sorting by rollNo if numeric
+      .sort((a, b) => {
+        const an = Number(a.rollNo);
+        const bn = Number(b.rollNo);
+        if (!Number.isNaN(an) && !Number.isNaN(bn)) return an - bn;
+        return String(a.rollNo).localeCompare(String(b.rollNo));
+      });
+  }, [classStudents, attendance, selectedDate]);
 
   const presentCount = rows.filter((r) => r.present).length;
   const absentCount = rows.length - presentCount;
 
   const markAll = (present) => {
-    setRows((prev) => prev.map((r) => ({ ...r, present })));
+    setAttendance((prev) => {
+      const next = { ...prev };
+      for (const r of rows) {
+        const key = `${selectedDate}__${r.key}`;
+        next[key] = present;
+      }
+      return next;
+    });
   };
 
-  const setOne = (id, present) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, present } : r)));
+  const setOne = (rowKey, present) => {
+    const key = `${selectedDate}__${rowKey}`;
+    setAttendance((prev) => ({ ...prev, [key]: present }));
   };
 
   return (
@@ -118,6 +204,15 @@ export default function TeacherAttendance() {
                 </option>
               ))}
             </select>
+
+            {/* optional refresh */}
+            <button
+              type="button"
+              onClick={fetchStudents}
+              className="mt-3 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+            >
+              Refresh Students
+            </button>
           </div>
 
           {/* Select date */}
@@ -131,9 +226,12 @@ export default function TeacherAttendance() {
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
               />
               <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
-                {/* calendar icon */}
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                  />
                 </svg>
               </div>
             </div>
@@ -153,6 +251,7 @@ export default function TeacherAttendance() {
               type="button"
               onClick={() => markAll(true)}
               className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              disabled={loading || !!error}
             >
               Mark All Present
             </button>
@@ -160,11 +259,19 @@ export default function TeacherAttendance() {
               type="button"
               onClick={() => markAll(false)}
               className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              disabled={loading || !!error}
             >
               Mark All Absent
             </button>
           </div>
         </div>
+
+        {/* Status */}
+        {loading ? (
+          <div className="mt-4 text-sm text-slate-600">Loading students...</div>
+        ) : error ? (
+          <div className="mt-4 text-sm text-rose-600">{error}</div>
+        ) : null}
       </div>
 
       {/* Table card */}
@@ -179,24 +286,31 @@ export default function TeacherAttendance() {
 
         {/* Rows */}
         <div className="divide-y divide-slate-200">
+          {!loading && !error && rows.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-slate-500">
+              No students found for <span className="font-semibold">{selectedClass}</span>.
+              <div className="mt-2">
+                Add students in <span className="font-semibold">My Students</span> page (with the same Class value).
+              </div>
+            </div>
+          ) : null}
+
           {rows.map((r) => {
             const status = r.present ? "Present" : "Absent";
             return (
               <div
-                key={r.id}
+                key={r.key}
                 className="grid grid-cols-12 items-center px-6 py-4 hover:bg-slate-50/50"
               >
-                <div className="col-span-3 text-sm text-slate-700">{r.id}</div>
-                <div className="col-span-5 text-sm font-medium text-slate-900">
-                  {r.name}
-                </div>
+                <div className="col-span-3 text-sm text-slate-700">{r.rollNo}</div>
+                <div className="col-span-5 text-sm font-medium text-slate-900">{r.name}</div>
                 <div className="col-span-2">
                   <StatusPill status={status} />
                 </div>
                 <div className="col-span-2 flex justify-end">
                   <Toggle
                     checked={r.present}
-                    onChange={(val) => setOne(r.id, val)}
+                    onChange={(val) => setOne(r.key, val)}
                     label={`Toggle attendance for ${r.name}`}
                   />
                 </div>
@@ -205,7 +319,6 @@ export default function TeacherAttendance() {
           })}
         </div>
 
-        {/* Footer space like screenshot */}
         <div className="h-4" />
       </div>
     </div>
