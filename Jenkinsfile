@@ -88,7 +88,6 @@ pipeline {
     FRONT_IMAGE = "${DOCKERHUB_USER}/edubook-frontend"
     BACK_IMAGE  = "${DOCKERHUB_USER}/edubook-backend"
 
-    TAG = "${env.GIT_COMMIT?.take(7)}"
     DOCKER_CLIENT_TIMEOUT = '600'
     COMPOSE_HTTP_TIMEOUT  = '600'
   }
@@ -98,7 +97,11 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        sh 'git rev-parse --short HEAD'
+        script {
+          // compute TAG after checkout (GIT_COMMIT is available now)
+          env.TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          echo "TAG = ${env.TAG}"
+        }
       }
     }
 
@@ -106,7 +109,6 @@ pipeline {
       steps {
         sh '''
           set -e
-
           docker version
           docker info
 
@@ -133,7 +135,6 @@ pipeline {
     stage('Push Images (Retry + Backoff)') {
       steps {
         script {
-          // Push each tag with retries + sleep backoff
           def pushWithRetry = { String imageTag ->
             int maxTries = 5
             for (int i = 1; i <= maxTries; i++) {
@@ -149,7 +150,6 @@ pipeline {
                 if (i == maxTries) {
                   error("FAILED pushing ${imageTag} after ${maxTries} tries")
                 }
-                // exponential-ish backoff
                 sh "sleep ${i * 10}"
               }
             }
@@ -167,11 +167,8 @@ pipeline {
       steps {
         sh '''
           set -e
-
-          # If your compose file is in repo root
           docker compose pull
           docker compose up -d
-
           docker compose ps
         '''
       }
@@ -180,13 +177,17 @@ pipeline {
 
   post {
     always {
-      sh '''
-        docker logout || true
-      '''
+      script {
+        // prevent post action from failing build
+        try {
+          sh 'docker logout || true'
+        } catch (e) {
+          echo "docker logout skipped: ${e}"
+        }
+      }
     }
     failure {
       echo "Build failed — check Docker Hub connectivity/DNS on Jenkins server."
     }
   }
 }
-
