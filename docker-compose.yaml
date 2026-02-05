@@ -36,33 +36,3 @@ services:
 volumes:
   mongo-data:
 
-
-# services:
-#   mongo:
-#     image: mongo:8
-#     container_name: edubook-mongo
-#     ports:
-#       - "27017:27017"
-#     volumes:
-#       - mongo_data:/data/db
-
-#   backend:
-#     build: ./Backend
-#     container_name: backend_c
-#     env_file:
-#       - ./Backend/.env
-#     depends_on:
-#       - mongo
-#     ports:
-#       - "5000:5000"
-
-#   frontend:
-#     build: ./Frontend
-#     container_name: frontend_c
-#     ports:
-#       - "5173:5173"
-#     depends_on:
-#       - backend
-
-# volumes:
-#   mongo_data:

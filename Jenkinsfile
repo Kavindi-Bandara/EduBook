@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     DOCKERHUB_CREDS = 'dockerhub-creds'
-    DOCKERHUB_USER  = 'YOUR_DOCKERHUB_USERNAME'
+    DOCKERHUB_USER  = 'kavi2001'
 
     FRONT_IMAGE = "${DOCKERHUB_USER}/edubook-frontend"
     BACK_IMAGE  = "${DOCKERHUB_USER}/edubook-backend"
