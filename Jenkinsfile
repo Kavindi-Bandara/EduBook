@@ -21,8 +21,8 @@ pipeline {
     stage('Build Images') {
       steps {
         sh """
-          docker build -t ${FRONT_IMAGE}:${TAG} -t ${FRONT_IMAGE}:latest ./frontend
-          docker build -t ${BACK_IMAGE}:${TAG} -t ${BACK_IMAGE}:latest ./backend
+          docker build -t ${FRONT_IMAGE}:${TAG} -t ${FRONT_IMAGE}:latest ./Frontend
+          docker build -t ${BACK_IMAGE}:${TAG} -t ${BACK_IMAGE}:latest ./Backend
         """
       }
     }
