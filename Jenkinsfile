@@ -20,10 +20,10 @@ pipeline {
 
     stage('Build Images') {
       steps {
-        sh """
+        sh '''
           docker build -t ${FRONT_IMAGE}:${TAG} -t ${FRONT_IMAGE}:latest ./Frontend
           docker build -t ${BACK_IMAGE}:${TAG} -t ${BACK_IMAGE}:latest ./Backend
-        """
+        '''
       }
     }
 
@@ -32,30 +32,41 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDS,
           usernameVariable: 'DH_USER',
           passwordVariable: 'DH_PASS')]) {
-          sh """
+
+          // Increase timeouts for slow networks / Docker Hub
+          sh '''
+            export DOCKER_CLIENT_TIMEOUT=300
+            export COMPOSE_HTTP_TIMEOUT=300
+
             echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-            docker push ${FRONT_IMAGE}:${TAG}
-            docker push ${FRONT_IMAGE}:latest
-            docker push ${BACK_IMAGE}:${TAG}
-            docker push ${BACK_IMAGE}:latest
-          """
+          '''
+
+          // Retry pushing if Docker Hub times out
+          retry(3) {
+            sh '''
+              docker push ${FRONT_IMAGE}:${TAG}
+              docker push ${FRONT_IMAGE}:latest
+              docker push ${BACK_IMAGE}:${TAG}
+              docker push ${BACK_IMAGE}:latest
+            '''
+          }
         }
       }
     }
 
     stage('Deploy') {
       steps {
-        sh """
+        sh '''
           docker compose pull
           docker compose up -d
-        """
+        '''
       }
     }
   }
 
   post {
     always {
-      sh "docker logout || true"
+      sh 'docker logout || true'
     }
   }
 }
