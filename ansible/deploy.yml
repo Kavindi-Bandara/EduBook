@@ -1,0 +1,52 @@
+- name: Deploy EduBook on EC2
+  hosts: edubook
+  become: true
+
+  vars:
+    app_dir: /opt/edubook
+
+  tasks:
+    - name: apt update
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Docker + compose plugin
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Ensure docker running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy compose file to server
+      copy:
+        src: docker-compose.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Pull latest images
+      shell: |
+        cd {{ app_dir }}
+        docker compose pull
+      args:
+        executable: /bin/bash
+
+    - name: Restart app
+      shell: |
+        cd {{ app_dir }}
+        docker compose up -d --remove-orphans
+      args:
+        executable: /bin/bash
+

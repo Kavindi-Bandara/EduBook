@@ -1,0 +1,17 @@
+services:
+  backend:
+    image: kavi2001/edubook-backend:latest
+    container_name: edubook-backend
+    restart: always
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: kavi2001/edubook-frontend:latest
+    container_name: edubook-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
