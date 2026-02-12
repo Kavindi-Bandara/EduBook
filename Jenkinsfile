@@ -30,7 +30,15 @@ pipeline {
       }
     }
 
-    // ✅ NEW: show what Jenkins actually checked out
+    // ✅ NEW: safely clean workspace (DON’T rm -rf manually)
+    // Requires: "Workspace Cleanup Plugin" installed
+    stage('Clean Workspace') {
+      steps {
+        cleanWs()
+      }
+    }
+
+    // ✅ Debug: show what Jenkins actually has
     stage('Debug - Workspace') {
       steps {
         sh '''
@@ -48,7 +56,7 @@ pipeline {
       }
     }
 
-    // ✅ NEW: fail early if folders missing
+    // ✅ Fail early if folders missing
     stage('Validate Project Folders') {
       steps {
         sh '''
