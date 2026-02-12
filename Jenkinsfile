@@ -20,8 +20,7 @@ pipeline {
 
   stages {
 
-    // NEW: safely clean workspace (DON’T rm -rf manually)
-    // Requires: "Workspace Cleanup Plugin" installed
+    // ✅ Clean workspace safely (needs Workspace Cleanup Plugin)
     stage('Clean Workspace') {
       steps {
         cleanWs()
@@ -38,8 +37,6 @@ pipeline {
       }
     }
 
-
-    //  Debug: show what Jenkins actually has
     stage('Debug - Workspace') {
       steps {
         sh '''
@@ -57,7 +54,6 @@ pipeline {
       }
     }
 
-    //  Fail early if folders missing
     stage('Validate Project Folders') {
       steps {
         sh '''
@@ -66,7 +62,7 @@ pipeline {
           test -d "Backend"  || (echo "ERROR: Backend folder not found in Jenkins workspace" && exit 1)
           test -f "Frontend/Dockerfile" || (echo "ERROR: Frontend/Dockerfile not found" && exit 1)
           test -f "Backend/Dockerfile"  || (echo "ERROR: Backend/Dockerfile not found" && exit 1)
-          echo " Folder validation OK"
+          echo "✅ Folder validation OK"
         '''
       }
     }
@@ -132,12 +128,21 @@ pipeline {
       }
     }
 
+    // ✅ FIXED: Add EC2 host key automatically before Ansible runs
     stage('Deploy to EC2 (Ansible)') {
       steps {
         sshagent(credentials: ['ec2-ssh-key']) {
           sh '''
             set -e
             ansible --version
+
+            HOST=$(grep -oP 'ansible_host=\\K\\S+' ansible/inventory.ini | head -n 1)
+            echo "✅ Target host: $HOST"
+
+            echo "✅ Adding host key to known_hosts..."
+            mkdir -p ~/.ssh
+            ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
             ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
           '''
         }
@@ -154,13 +159,13 @@ pipeline {
             set -e
             for i in 1 2 3 4 5; do
               if curl -fsS --max-time 10 http://${host}/ > /dev/null; then
-                echo " Deploy OK"
+                echo "✅ Deploy OK"
                 exit 0
               fi
               echo "Waiting... attempt \$i"
               sleep 5
             done
-            echo "Deploy Failed"
+            echo "❌ Deploy Failed"
             exit 1
           """
         }
