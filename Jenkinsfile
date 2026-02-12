@@ -128,26 +128,22 @@ pipeline {
       }
     }
 
-    // ✅ FIXED: Add EC2 host key automatically before Ansible runs
-    stage('Deploy to EC2 (Ansible)') {
-      steps {
-        sshagent(credentials: ['ec2-ssh-key']) {
-          sh '''
-            set -e
-            ansible --version
+   stage('Deploy to EC2 (Ansible)') {
+   steps {
+    sshagent(credentials: ['ec2-ssh-key']) {
+      sh '''
+        set -e
+        ansible --version
 
-            HOST=$(grep -oP 'ansible_host=\\K\\S+' ansible/inventory.ini | head -n 1)
-            echo "✅ Target host: $HOST"
+        export ANSIBLE_HOST_KEY_CHECKING=False
 
-            echo "✅ Adding host key to known_hosts..."
-            mkdir -p ~/.ssh
-            ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-
-            ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
-          '''
-        }
-      }
+        ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+          --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      '''
     }
+  }
+}
+
 
     stage('Health Check (Deploy Status)') {
       steps {
