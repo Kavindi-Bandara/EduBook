@@ -84,3 +84,8 @@ data/db/*.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# AWS CLI installer files (do not commit)
+aws/
+awscliv2.zip
+
