@@ -24,7 +24,6 @@ pipeline {
       steps {
         checkout scm
         script {
-          // compute TAG after checkout (GIT_COMMIT is available now)
           env.TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
           echo "TAG = ${env.TAG}"
         }
@@ -88,21 +87,53 @@ pipeline {
         }
       }
     }
+
+    //  NEW: Deploy stage (CD)
+    stage('Deploy to EC2 (Ansible)') {
+      steps {
+        sshagent(credentials: ['ec2-ssh-key']) {
+          sh '''
+            set -e
+            ansible --version
+            ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+          '''
+        }
+      }
+    }
+
+    //  NEW: Deploy Status stage
+    stage('Health Check (Deploy Status)') {
+      steps {
+        script {
+          def host = sh(script: "grep -oP 'ansible_host=\\K\\S+' ansible/inventory.ini | head -n 1", returnStdout: true).trim()
+          echo "Checking http://${host}/"
+
+          sh """
+            set -e
+            for i in 1 2 3 4 5; do
+              if curl -fsS --max-time 10 http://${host}/ > /dev/null; then
+                echo " Deploy OK"
+                exit 0
+              fi
+              echo "Waiting... attempt \$i"
+              sleep 5
+            done
+            echo " Deploy Failed"
+            exit 1
+          """
+        }
+      }
+    }
   }
 
   post {
     always {
       script {
-        // prevent post action from failing build
-        try {
-          sh 'docker logout || true'
-        } catch (e) {
-          echo "docker logout skipped: ${e}"
-        }
+        try { sh 'docker logout || true' } catch (e) { echo "docker logout skipped: ${e}" }
       }
     }
     failure {
-      echo "Build failed — check Docker Hub connectivity/DNS on Jenkins server."
+      echo "Pipeline failed — check logs (DockerHub/Ansible/HealthCheck)."
     }
   }
 }
