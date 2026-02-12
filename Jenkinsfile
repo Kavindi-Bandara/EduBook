@@ -30,6 +30,38 @@ pipeline {
       }
     }
 
+    // ✅ NEW: show what Jenkins actually checked out
+    stage('Debug - Workspace') {
+      steps {
+        sh '''
+          set -e
+          echo "=== PWD ==="
+          pwd
+          echo "=== LS (root) ==="
+          ls -la
+          echo "=== Find folders (depth 2) ==="
+          find . -maxdepth 2 -type d -print
+          echo "=== Check expected folders ==="
+          ls -la Frontend || true
+          ls -la Backend  || true
+        '''
+      }
+    }
+
+    // ✅ NEW: fail early if folders missing
+    stage('Validate Project Folders') {
+      steps {
+        sh '''
+          set -e
+          test -d "Frontend" || (echo "ERROR: Frontend folder not found in Jenkins workspace" && exit 1)
+          test -d "Backend"  || (echo "ERROR: Backend folder not found in Jenkins workspace" && exit 1)
+          test -f "Frontend/Dockerfile" || (echo "ERROR: Frontend/Dockerfile not found" && exit 1)
+          test -f "Backend/Dockerfile"  || (echo "ERROR: Backend/Dockerfile not found" && exit 1)
+          echo "✅ Folder validation OK"
+        '''
+      }
+    }
+
     stage('Build Images') {
       steps {
         sh '''
@@ -37,7 +69,10 @@ pipeline {
           docker version
           docker info
 
+          echo "Building Frontend from ./Frontend"
           docker build --pull -t ${FRONT_IMAGE}:${TAG} -t ${FRONT_IMAGE}:latest ./Frontend
+
+          echo "Building Backend from ./Backend"
           docker build --pull -t ${BACK_IMAGE}:${TAG} -t ${BACK_IMAGE}:latest ./Backend
         '''
       }
@@ -88,7 +123,6 @@ pipeline {
       }
     }
 
-    //  NEW: Deploy stage (CD)
     stage('Deploy to EC2 (Ansible)') {
       steps {
         sshagent(credentials: ['ec2-ssh-key']) {
@@ -101,7 +135,6 @@ pipeline {
       }
     }
 
-    //  NEW: Deploy Status stage
     stage('Health Check (Deploy Status)') {
       steps {
         script {
@@ -112,13 +145,13 @@ pipeline {
             set -e
             for i in 1 2 3 4 5; do
               if curl -fsS --max-time 10 http://${host}/ > /dev/null; then
-                echo " Deploy OK"
+                echo "✅ Deploy OK"
                 exit 0
               fi
               echo "Waiting... attempt \$i"
               sleep 5
             done
-            echo " Deploy Failed"
+            echo "❌ Deploy Failed"
             exit 1
           """
         }
@@ -133,7 +166,7 @@ pipeline {
       }
     }
     failure {
-      echo "Pipeline failed — check logs (DockerHub/Ansible/HealthCheck)."
+      echo "Pipeline failed — check logs (Build/Push/Deploy/HealthCheck)."
     }
   }
 }
