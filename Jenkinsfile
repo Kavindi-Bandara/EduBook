@@ -20,6 +20,14 @@ pipeline {
 
   stages {
 
+    // NEW: safely clean workspace (DON’T rm -rf manually)
+    // Requires: "Workspace Cleanup Plugin" installed
+    stage('Clean Workspace') {
+      steps {
+        cleanWs()
+      }
+    }
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -30,15 +38,8 @@ pipeline {
       }
     }
 
-    // ✅ NEW: safely clean workspace (DON’T rm -rf manually)
-    // Requires: "Workspace Cleanup Plugin" installed
-    stage('Clean Workspace') {
-      steps {
-        cleanWs()
-      }
-    }
 
-    // ✅ Debug: show what Jenkins actually has
+    //  Debug: show what Jenkins actually has
     stage('Debug - Workspace') {
       steps {
         sh '''
@@ -56,7 +57,7 @@ pipeline {
       }
     }
 
-    // ✅ Fail early if folders missing
+    //  Fail early if folders missing
     stage('Validate Project Folders') {
       steps {
         sh '''
@@ -65,7 +66,7 @@ pipeline {
           test -d "Backend"  || (echo "ERROR: Backend folder not found in Jenkins workspace" && exit 1)
           test -f "Frontend/Dockerfile" || (echo "ERROR: Frontend/Dockerfile not found" && exit 1)
           test -f "Backend/Dockerfile"  || (echo "ERROR: Backend/Dockerfile not found" && exit 1)
-          echo "✅ Folder validation OK"
+          echo " Folder validation OK"
         '''
       }
     }
@@ -153,13 +154,13 @@ pipeline {
             set -e
             for i in 1 2 3 4 5; do
               if curl -fsS --max-time 10 http://${host}/ > /dev/null; then
-                echo "✅ Deploy OK"
+                echo " Deploy OK"
                 exit 0
               fi
               echo "Waiting... attempt \$i"
               sleep 5
             done
-            echo "❌ Deploy Failed"
+            echo "Deploy Failed"
             exit 1
           """
         }
