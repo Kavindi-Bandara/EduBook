@@ -92,7 +92,7 @@ export default function LogIn() {
           </div>
 
           <h1 className="mt-4 text-2xl font-semibold md:text-3xl">
-            Log in to EduBook
+            Kavindi
           </h1>
         </div>
 
