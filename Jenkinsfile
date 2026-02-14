@@ -20,7 +20,7 @@ pipeline {
 
   stages {
 
-    // ✅ Clean workspace safely (needs Workspace Cleanup Plugin)
+    // Clean workspace safely
     stage('Clean Workspace') {
       steps {
         cleanWs()
@@ -128,22 +128,21 @@ pipeline {
       }
     }
 
-   stage('Deploy to EC2 (Ansible)') {
-   steps {
-    sshagent(credentials: ['ec2-ssh-key']) {
-      sh '''
-        set -e
-        ansible --version
+    stage('Deploy to EC2 (Ansible)') {
+      steps {
+        sshagent(credentials: ['ec2-ssh-key']) {
+          sh '''
+            set -e
+            ansible --version
 
-        export ANSIBLE_HOST_KEY_CHECKING=False
+            export ANSIBLE_HOST_KEY_CHECKING=False
 
-        ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
-          --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-      '''
+            ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+              --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+          '''
+        }
+      }
     }
-  }
-}
-
 
     stage('Health Check (Deploy Status)') {
       steps {
@@ -172,7 +171,11 @@ pipeline {
   post {
     always {
       script {
-        try { sh 'docker logout || true' } catch (e) { echo "docker logout skipped: ${e}" }
+        try { 
+          sh 'docker logout || true' 
+        } catch (e) { 
+          echo "docker logout skipped: ${e}" 
+        }
       }
     }
     failure {
