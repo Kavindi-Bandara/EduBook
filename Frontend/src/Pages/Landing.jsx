@@ -14,7 +14,7 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             <div className="h-7 w-7 rounded bg-indigo-600" />
             <span className="text-base font-semibold text-slate-900 md:text-lg">
-              EduBook
+              education
             </span>
           </div>
 
