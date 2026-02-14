@@ -3,7 +3,7 @@ const StudentRecord = require("../models/StudentRecord");
 const Student = require("../models/Student");
 
 // ===========================
-// ✅ TEACHER: STUDENT LIST CRUD
+// TEACHER: STUDENT LIST CRUD
 // ===========================
 
 // GET /records  (Teacher only) -> list students created by logged teacher
@@ -51,7 +51,7 @@ const updateStudent = async (req, res) => {
     const { id } = req.params;
 
     const updated = await Student.findOneAndUpdate(
-      { _id: id, teacher: req.user._id }, // ✅ teacher can only update own students
+      { _id: id, teacher: req.user._id }, //  teacher can only update own students
       { ...req.body },
       { new: true, runValidators: true }
     );
@@ -83,7 +83,7 @@ const deleteStudent = async (req, res) => {
 };
 
 // ===========================
-// ✅ YOUR OLD RECORD FUNCTIONS (KEEP)
+// YOUR OLD RECORD FUNCTIONS (KEEP)
 // ===========================
 
 // TEACHER: create record for a student userId
@@ -182,13 +182,13 @@ const getRecordByStudent = async (req, res) => {
 };
 
 module.exports = {
-  // ✅ student list CRUD
+  //  student list CRUD
   listStudents,
   createStudent,
   updateStudent,
   deleteStudent,
 
-  // ✅ old record functions
+  //  old record functions
   createRecord,
   addAttendance,
   addGrade,

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const studentSchema = new mongoose.Schema(
   {
-    // ✅ which teacher created/owns this student
+    // which teacher created/owns this student
     teacher: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
     name: { type: String, required: true, trim: true },
@@ -17,10 +17,10 @@ const studentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ prevent duplicate emails per teacher
+//  prevent duplicate emails per teacher
 studentSchema.index({ teacher: 1, email: 1 }, { unique: true });
 
-// ✅ prevent duplicate roll numbers per teacher
+//  prevent duplicate roll numbers per teacher
 studentSchema.index({ teacher: 1, rollNo: 1 }, { unique: true });
 
 module.exports = mongoose.model("Student", studentSchema);
