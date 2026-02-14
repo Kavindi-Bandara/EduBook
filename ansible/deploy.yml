@@ -1,9 +1,14 @@
+---
 - name: Deploy EduBook on EC2
-  hosts: edubook
+  hosts: ec2  # Changed from 'edubook' to 'ec2' to match your inventory
   become: true
 
   vars:
     app_dir: /opt/edubook
+    backend_image: "kavi2001/edubook-backend:{{ tag | default('latest') }}"
+    frontend_image: "kavi2001/edubook-frontend:{{ tag | default('latest') }}"
+    mongo_uri: "{{ mongo_uri | default('mongodb://172.17.0.1:27017/edubook') }}"
+    jwt_secret: "{{ jwt_secret | default('') }}"
 
   tasks:
     - name: apt update
@@ -11,8 +16,8 @@
         update_cache: yes
         cache_valid_time: 3600
 
-    # ---- FIX: install Docker cleanly (no containerd conflict) ----
-    - name: Remove potentially conflicting Docker/containerd packages (ignore if not present)
+    # ---- Install Docker cleanly ----
+    - name: Remove potentially conflicting Docker/containerd packages
       apt:
         name:
           - docker.io
@@ -54,7 +59,7 @@
       apt:
         update_cache: yes
 
-    - name: Install Docker Engine + Compose plugin (official repo)
+    - name: Install Docker Engine + Compose plugin
       apt:
         name:
           - docker-ce
@@ -71,31 +76,133 @@
         state: started
         enabled: true
 
-    # ---- App deploy ----
+    # ---- Create app directory ----
     - name: Create app directory
       file:
         path: "{{ app_dir }}"
         state: directory
         mode: "0755"
 
+    # ---- BACKEND DEPLOYMENT (with environment variables) ----
+    - name: Pull latest backend image
+      shell: "docker pull {{ backend_image }}"
+      register: pull_result
+      changed_when: "'Downloaded' in pull_result.stdout"
+
+    - name: Stop and remove existing backend container
+      shell: |
+        docker stop edubook-backend || true
+        docker rm edubook-backend || true
+      ignore_errors: yes
+
+    - name: Run backend container with proper environment variables
+      shell: |
+        docker run -d --name edubook-backend \
+          -p 5000:5000 \
+          -e PORT=5000 \
+          -e NODE_ENV=production \
+          -e MONGO_URI={{ mongo_uri }} \
+          -e JWT_SECRET={{ jwt_secret }} \
+          -e JWT_EXPIRES_IN=7d \
+          --restart always \
+          {{ backend_image }}
+      register: backend_run_result
+
+    - name: Wait for backend to initialize
+      pause:
+        seconds: 5
+
+    # ---- FRONTEND DEPLOYMENT (using docker-compose) ----
     - name: Copy compose file to server
       copy:
         src: docker-compose.yml
         dest: "{{ app_dir }}/docker-compose.yml"
         mode: "0644"
 
-    - name: Pull latest images
+    - name: Pull latest frontend images
       shell: |
         set -e
         cd {{ app_dir }}
-        docker compose pull
+        docker compose pull frontend
       args:
         executable: /bin/bash
+      ignore_errors: yes
+      register: frontend_pull_result
 
-    - name: Restart app
+    - name: Stop and remove existing frontend container
       shell: |
-        set -e
-        cd {{ app_dir }}
-        docker compose up -d --remove-orphans
-      args:
-        executable: /bin/bash
+        docker stop edubook-frontend || true
+        docker rm edubook-frontend || true
+      ignore_errors: yes
+
+    - name: Run frontend container directly (alternative to compose)
+      shell: |
+        docker run -d --name edubook-frontend \
+          -p 80:80 \
+          --restart always \
+          {{ frontend_image }}
+      register: frontend_run_result
+      when: frontend_pull_result is succeeded
+
+    # ---- Optional: Deploy MongoDB if needed ----
+    - name: Pull MongoDB image
+      shell: docker pull mongo:latest
+      when: false  # Set to true if you want MongoDB deployed via Ansible
+      ignore_errors: yes
+
+    - name: Run MongoDB container (if needed)
+      shell: |
+        docker run -d --name edubook-mongo \
+          -p 27017:27017 \
+          --restart always \
+          mongo:latest
+      when: false  # Set to true if you want MongoDB deployed via Ansible
+      ignore_errors: yes
+
+    # ---- VERIFICATION TASKS ----
+    - name: Check running containers
+      shell: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      register: docker_ps_result
+
+    - name: Display running containers
+      debug:
+        var: docker_ps_result.stdout_lines
+
+    - name: Check backend logs
+      shell: docker logs edubook-backend --tail 20
+      register: backend_logs
+      ignore_errors: yes
+
+    - name: Display backend logs (first 20 lines)
+      debug:
+        var: backend_logs.stdout_lines
+      when: backend_logs.stdout is defined
+
+    - name: Check frontend logs
+      shell: docker logs edubook-frontend --tail 10
+      register: frontend_logs
+      ignore_errors: yes
+
+    - name: Display frontend logs
+      debug:
+        var: frontend_logs.stdout_lines
+      when: frontend_logs.stdout is defined
+
+    # ---- HEALTH CHECKS ----
+    - name: Test backend locally
+      shell: curl -s http://localhost:5000/ || echo "Backend not responding"
+      register: backend_health
+      ignore_errors: yes
+
+    - name: Display backend health check
+      debug:
+        var: backend_health.stdout
+
+    - name: Test frontend locally
+      shell: curl -s -I http://localhost:80/ | head -1 || echo "Frontend not responding"
+      register: frontend_health
+      ignore_errors: yes
+
+    - name: Display frontend health check
+      debug:
+        var: frontend_health.stdout

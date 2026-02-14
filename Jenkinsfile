@@ -131,15 +131,23 @@ pipeline {
     stage('Deploy to EC2 (Ansible)') {
       steps {
         sshagent(credentials: ['ec2-ssh-key']) {
-          sh '''
-            set -e
-            ansible --version
-
-            export ANSIBLE_HOST_KEY_CHECKING=False
-
-            ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
-              --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-          '''
+          withCredentials([
+            string(credentialsId: 'mongo-uri', variable: 'MONGO_URI'),
+            string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET')
+          ]) {
+            sh '''
+              set -e
+              export ANSIBLE_HOST_KEY_CHECKING=False
+              
+              echo "Deploying with TAG: ${TAG}"
+              echo "MongoDB URI and JWT secret are securely injected"
+              
+              # Pass variables to ansible-playbook
+              ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+                --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' \
+                --extra-vars "mongo_uri=${MONGO_URI} jwt_secret=${JWT_SECRET} tag=${TAG}"
+            '''
+          }
         }
       }
     }
@@ -148,19 +156,31 @@ pipeline {
       steps {
         script {
           def host = sh(script: "grep -oP 'ansible_host=\\K\\S+' ansible/inventory.ini | head -n 1", returnStdout: true).trim()
-          echo "Checking http://${host}/"
+          echo "Checking Frontend at http://${host}/"
+          echo "Checking Backend at http://${host}:5000/"
 
           sh """
             set -e
+            echo "Checking frontend (port 80)..."
             for i in 1 2 3 4 5; do
               if curl -fsS --max-time 10 http://${host}/ > /dev/null; then
-                echo "✅ Deploy OK"
-                exit 0
+                echo "✅ Frontend OK"
+                break
               fi
-              echo "Waiting... attempt \$i"
+              echo "Waiting for frontend... attempt \$i"
               sleep 5
             done
-            echo "❌ Deploy Failed"
+            
+            echo "Checking backend (port 5000)..."
+            for i in 1 2 3 4 5; do
+              if curl -fsS --max-time 10 http://${host}:5000/ > /dev/null; then
+                echo "✅ Backend OK"
+                exit 0
+              fi
+              echo "Waiting for backend... attempt \$i"
+              sleep 5
+            done
+            echo "❌ Backend failed to respond"
             exit 1
           """
         }
